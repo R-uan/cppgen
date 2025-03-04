@@ -52,8 +52,14 @@ impl Args {
 fn main() {
     let args = Args::parse();
     let valid_args: ValidArgs;
+
     if args.language.is_some() && args.name.is_some() {
-        valid_args = args.to_real();
+        let v_args = args.to_real();
+        if v_args.language != "C" && v_args.language != "CPP" {
+            eprintln!("Language: Only C and CPP (C++) available.");
+            exit(1);
+        }
+        valid_args = v_args;
     } else {
         valid_args = interactive_prompt().to_real();
     }
@@ -127,7 +133,11 @@ fn create_project(args: &ValidArgs) {
         let _ = std::fs::create_dir(format!("./{}/include", &project_name))
             .expect("Could not create \"include\" folder (｡•́︿•̀｡)");
 
-        // Create CMakeLists.txt
+        let undo_all = || {
+            let _ = std::fs::remove_dir_all(format!("./{}", project_name));
+            exit(1);
+        };
+
         let c_make = format!(
             "cmake_minimum_required(VERSION 3.11)
 
@@ -155,9 +165,9 @@ int main(void)
 
         let main_cpp = format!(
             "#include <iostream>
+
 int main() 
 {{
-
     std::cout << \"Hello World\" << std::endl;
     return 0;
 }}"
@@ -168,10 +178,11 @@ int main()
                 "Could not create CMakeLists.txt script (｡•́︿•̀｡): {}",
                 err.to_string()
             );
+            undo_all();
         };
 
         if let Err(err) = std::fs::write(
-            format!("./{}/src/main.{}", project_name, extension),
+            format!("./{}/src/main{}", project_name, extension),
             match language.as_str() {
                 "C" => main_c,
                 "CPP" => main_cpp,
@@ -182,6 +193,7 @@ int main()
                 "Could not create main script file (｡•́︿•̀｡): {}",
                 err.to_string()
             );
+            undo_all();
         };
 
         if let Err(err) = std::fs::write(
@@ -198,10 +210,12 @@ cmake --build build
                 "Could not create build script (｡•́︿•̀｡): {}",
                 err.to_string()
             );
+            undo_all();
         };
 
         if let Err(err) = std::fs::write(format!("./{}/.gitignore", project_name), gitignore) {
             eprintln!("Could not create .gitignore (｡•́︿•̀｡): {}", err.to_string());
+            undo_all();
         }
     }
 }
