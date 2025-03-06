@@ -7,12 +7,13 @@ static C_GIT_IGNORE: &str = include_str!("templates/c.gitignore");
 static CPP_GIT_IGNORE: &str = include_str!("templates/cpp.gitignore");
 
 #[derive(Parser, Default)]
+#[command(version = "v1.0.1", about = "Simple CLI to generate C/C++ projects with minimal structure.", author = "R-uan, rpo.lopes@hotmail.com", long_about = None)]
 struct Args {
-    /// Project name
+    /// Project name (keep in mind your OS limitations)
     #[arg(short, long)]
     name: Option<String>,
 
-    /// C or CPP
+    /// Project programming language (C or CPP)
     #[arg(short, long)]
     language: Option<String>,
 }
@@ -32,7 +33,7 @@ impl Args {
 
     fn to_real(self) -> ValidArgs<'static> {
         let name = self.name.unwrap();
-        let language = self.language.unwrap().to_owned();
+        let language = self.language.unwrap().to_owned().to_uppercase();
         let (extension, gitignore, cmake) = match language.as_str() {
             "C" => (".c".into(), &C_GIT_IGNORE, "C".into()).into(),
             "CPP" => (".cpp".into(), &CPP_GIT_IGNORE, "CXX".into()),
@@ -142,7 +143,7 @@ fn create_project(args: &ValidArgs) {
             "cmake_minimum_required(VERSION 3.11)
 
 set(PROJECT_NAME {})
-                
+
 project(${{PROJECT_NAME}} {})
 
 file(GLOB_RECURSE SOURCES \"src/*.cpp\")
@@ -156,7 +157,7 @@ add_executable(${{PROJECT_NAME}} ${{SOURCES}})",
         let main_c = format!(
             "#include <stdio.h>
 
-int main(void) 
+int main(void)
 {{
     printf(\"Hello World\");
     return 0;
@@ -166,7 +167,7 @@ int main(void)
         let main_cpp = format!(
             "#include <iostream>
 
-int main() 
+int main()
 {{
     std::cout << \"Hello World\" << std::endl;
     return 0;
